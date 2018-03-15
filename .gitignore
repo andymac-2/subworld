@@ -1,1 +1,5 @@
 .stack-work/
+*.swo
+*.swp
+*~
+*.DS_Store
