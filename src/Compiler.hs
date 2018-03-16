@@ -12,11 +12,14 @@ import Text.Parsec.Text
     ( GenParser )
 import Data.Char
     ( ord )
+import Data.Bits
+    ( testBit )
 import qualified Data.HashMap.Strict as H
 
 data Cell = Literal Int | Label String 
     deriving (Show)
-type ParseState = (Int, H.HashMap String Int)
+type LabelMap = H.HashMap String Int
+type ParseState = (Int, LabelMap)
 type SParser = GenParser ParseState 
 
 programStart :: Int
@@ -24,8 +27,33 @@ programStart = 130
 
 compile :: T.Text -> T.Text
 compile programText = result where
-    cellState = runParserOrDie programText
-    result = T.pack $ show cellState
+    (cells, (_, h)) = runParserOrDie programText
+    binary = map (intToParagraph . resolveCell h) $ cells    
+    result = T.intercalate (T.pack "\n\n") binary
+    
+splitList :: Int -> [a] -> [[a]]
+splitList _ [] = []
+splitList n xs = (prefix : splitList n suffix) where
+    (prefix, suffix) = splitAt n xs
+    
+intToParagraph :: Int -> T.Text
+intToParagraph n = result where
+    wStr = T.pack "world"
+    hStr = T.pack "hello"
+
+    makeHello True = [hStr]
+    makeHello False = [wStr, wStr, wStr, hStr, wStr, wStr]
+
+    stringList = concat . map (makeHello . testBit n) $ [0..32]
+    lines = map (T.intercalate (T.pack " ")) . splitList 12 $ stringList
+    formattedPara = T.intercalate (T.pack "\n    ") $ lines 
+    result  = T.append (T.pack "    ") formattedPara 
+
+resolveCell :: LabelMap -> Cell -> Int
+resolveCell _ (Literal a) = a
+resolveCell hash (Label s) = case H.lookup s hash of
+    Just address -> address
+    Nothing -> error ("Label has been referenced but not defined: " ++ show s)
 
 runParserOrDie :: T.Text -> ([Cell], ParseState)
 runParserOrDie source = case runParser file (130, H.empty) "" source of
@@ -89,7 +117,7 @@ quotedChar = do
             escapeChar
         , noneOf "\"\\"
         ]
-    return . Literal . ord $ ch
+    return . Literal . (0 -) . ord $ ch
 
 escapeChar :: SParser Char
 escapeChar = choice
