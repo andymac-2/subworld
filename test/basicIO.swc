@@ -1,0 +1,78 @@
+###
+# puts(label): prints a string at 'label' to stdout
+###
+define(`puts_c', `0')
+define(`puts',`
+    define(`puts_c', incr(puts_c))
+    `puts_start_'puts_c:
+        $1 -1 `puts_end_'puts_c;
+        NEG1 `puts_start_'puts_c;
+        Z Z `puts_start_'puts_c;
+    `puts_end_'puts_c:')
+
+###
+# getLine(buffer): reads stdin until newline, null, or EOF into 
+# buffer labeled by "buffer"
+###
+define(`gL_c', `0')
+define(`getLine', `
+    define(`gL_c', incr(gL_c))
+    `gL_start_'gL_c:
+        -1 `gL_character_'gL_c `gL_finalise_'gL_c;
+        `gL_character_'gL_c `gL_character_'gL_c`.1';
+        beq(NEWLINE, `gL_character_'gL_c, `gL_finalise_'gL_c)
+        Z Z `gL_continue_'gL_c;
+    `gL_finalise_'gL_c:
+        `gL_character_'gL_c`.1' `gL_character_'gL_c`.1';
+    `gL_continue_'gL_c:
+        `gL_character_'gL_c`.1' $1 `gL_end_'gL_c;
+        NEG1 `gL_continue_'gL_c`.1';
+        Z Z `gL_start_'gL_c; 
+    `gL_character_'gL_c:
+        [-1, -1];
+    `gL_end_'gL_c:')
+
+###
+# mov(a, b) set b = a
+###
+define(`mov',`
+    $2 $2;
+    $1 Z;
+    Z $2;
+    Z Z;')
+
+###
+# beq(a, b, c) branch if a = b. destroys b in the process
+###
+define(`beq',`
+        $1 $2;
+        bz($2, $3)')
+
+###
+# bz(a, b) branch if 'a' is zero to 'b'. destroys a in the process
+###
+define(`bz_c', `0')
+define(`bz',`
+    define(`bz_c', incr(bz_c))
+        $1 Z `bz_test2_'bz_c;
+        Z Z `bz_end_'bz_c;
+    `bz_test2_'bz_c:
+        Z Z;
+        Z $1 $2;
+    `bz_end_'bz_c:')
+
+
+start:
+    puts(greeting)
+    getLine(nameBuffer)
+    puts(prefix)
+    puts(nameBuffer)
+    puts(suffix)
+
+Z: [0];
+NEG1: [-1];
+NEWLINE: "\n";
+greeting: "Please enter your name: \n\0";
+suffix: "!\n\0";
+prefix: "Hello, ";
+nameBuffer:

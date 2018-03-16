@@ -73,9 +73,17 @@ file = do
     return (concat $ cells, st)
 
 statement :: SParser [Cell]
-statement = (do
-    optional (try label)
+statement = do
     seps
+    choice
+        [ try $ do 
+            label
+            return []
+        , notLabel
+        ]
+
+notLabel :: SParser [Cell]
+notLabel = (do
     cells <- choice
         [ try quotedString
         , try instruction
@@ -98,6 +106,7 @@ label = (do
     labelName <- identifier
     seps
     char ':'
+    seps
     modifyState (\(cellNo, hash) ->
         (cellNo, H.insert labelName cellNo hash))) <?> "label"
 
