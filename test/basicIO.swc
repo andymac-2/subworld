@@ -2,7 +2,7 @@ Z Z main;          # goto main
 ################################################################################
 # global varaiables
 ################################################################################
-Z:          [0];    # zero
+Z:          [0, 0];    # zero
 NEG1:       [-1];   # negative one, used fo incrementing
 ONE:        [1];    # one, used for decrementing
 
@@ -12,6 +12,13 @@ ONE:        [1];    # one, used for decrementing
 define(`goto', `
         # goto $1
         Z Z $1;')
+
+################################################################################
+# halt: halt program
+################################################################################
+define(`halt', `
+        # halt
+        Z Z -1;')
 
 ################################################################################
 # zero(label): set value at label to zero
@@ -61,6 +68,7 @@ define(`putchar',`
 ################################################################################
 define(`getchar', `
         # getchar $1
+        zero($1)
         -1 $1;')
 
 ################################################################################
@@ -100,34 +108,29 @@ define(`zeros',`define(`zeros_c', incr(zeros_c))
 
 
 ################################################################################
-# getLine(buffer, untilChar): reads stdin into 'buffer' until it encounters 
+# getline(buffer, untilChar): reads stdin into 'buffer' until it encounters 
 # 'untilChar', null, or EOF.
 ################################################################################
-gL_characters: [-1, -1];
-gL_label: [-1];
+gL_character: [-1];
+gL_pointer: [-1];
 define(`gL_c', `0')
-define(`getLine', `define(`gL_c', incr(gL_c))
+define(`getline', `define(`gL_c', incr(gL_c))
         # getLine $1
-        movneg(`gL_start_'gL_c, gL_label)        # store our pointer to the buffer for later
+        movl($1, gL_pointer)                    # initialise pointer
     `gL_start_'gL_c:
-        $1 $1;                                  # zero out character in character buffer
-        zero(gL_character.0)                    # zero A
-        -1 gL_characters.0 `gL_finalise_'gL_c;  # write negative character to A
-        movneg(gL_characters.0 gL_characters.1) # write positive character to B
-        beq($2, gL_characters.0, `gL_finalise_'gL_c) # break if character equal to terminating character.
+        zero(gL_character)                          # zero A
+        -1 gL_character `gL_continue_'gL_c;         # write negative character to A, break if null or EOF
+        goto(`gL_finalise_'gL_c)
     `gL_continue_'gL_c:
-        gL_characters.1 $1;                     # write A to buffer
-        inc(`gL_continue_'gL_c`.1')             # increment buffer pointer
-        inc(`gL_start_'gL_c`.0')
-        inc(`gL_start_'gL_c`.1')
-        goto(`gL_start_'gL_c);                  # loop
+        beq($2, gL_character, `gL_finalise_'gL_c) # break if character equal to terminating character.
+        movp(gL_character, gL_pointer)
+        inc(gL_pointer)
+        goto(`gL_start_'gL_c)
     `gL_finalise_'gL_c:                         # restore pointers.
-        movneg(gL_label, `gL_start_'gL_c`.0')
-        movneg(gL_label, `gL_start_'gL_c`.1')
-        movneg(gL_label, `gL_continue_'gL_c`.1')')
+        movp(Z, gL_pointer)')                     # null terminate string
 
 ################################################################################
-# mov(a, b) set b = a
+# mov(a, b) set $b = $a, the variable at a
 ################################################################################
 define(`mov',`
         # mov $1 $2
@@ -137,12 +140,48 @@ define(`mov',`
         zero(Z)')
 
 ################################################################################
-# deref(a, b) set b = *a
+# movl(a, b) set $b = a, the literal a
 ################################################################################
-define(`deref',`
-        # deref $1 $2
+define(`movl_c', `0')
+define(`movl',`define(`movl_c', incr(movl_c))
+        # movl $1 $2
         zero($2)
+        sub(`movl_data_'movl_c, Z)
+        sub(Z, $2)
+        goto(`movl_end_'movl_c)
+    `movl_data_'movl_c: [$1];
+    `movl_end_'movl_c:')
+
+################################################################################
+# movp(a, b) MOVe Pointer: set *b = $a, the variable at a
+################################################################################
+define(`movp_c', `0')
+define(`movp', `define(`movp_c', incr(movp_c))
+        # movp $1 $2
+        zero(`movp_ptr_'movp_c`.0')
+        zero(`movp_ptr_'movp_c`.1')
+        zero(`movp_ptr_'movp_c`.7')
+        sub($2, Z)
+        sub(Z, `movp_ptr_'movp_c`.0')
+        sub(Z, `movp_ptr_'movp_c`.1')
+        sub(Z, `movp_ptr_'movp_c`.7')
+        zero(Z)
+    `movp_ptr_'movp_c:
+        zero(-1)    # the -1s here will be assigned
         sub($1, Z)
+        sub(Z, -1)  # the -1 here will be assigned
+        zero(Z)')
+
+################################################################################
+# deref(a, b) set $b = *a
+################################################################################
+define(`deref_c', `0')
+define(`deref',`define(`deref_c', incr(deref_c))
+        # deref $1 $2
+        mov($1, `deref_ptr_'deref_c) # modify the instruction below to point to "a"
+        zero($2)
+    `deref_ptr_'deref_c:
+        sub(-1, Z)  # the negative one here will be the value at "a"
         sub(Z, $2)
         zero(Z)')
 
@@ -165,7 +204,7 @@ define(`beq',`
 define(`bneq_c', `0')
 define(`bneq',`define(`bneq_c', incr(bneq_c))
         # bneq $1 $2 $3
-        beq($1 $2, `bneq_end_'bneq_c)
+        beq($1, $2, `bneq_end_'bneq_c)
         goto($3)
     `bneq_end_'bneq_c:')
 
@@ -201,18 +240,25 @@ define(`bz',`define(`bz_c', incr(bz_c))
         bleq($1, $2);
     `bz_end_'bz_c:')
 
-
-main:
-    puts(greeting)
-    getchar(nameBuffer.0)
-    getchar(nameBuffer.1)
-    getchar(nameBuffer.2)
-    puts(prefix)
-    puts(nameBuffer)
-    puts(suffix)
+###############################################################################
 
 NEWLINE: "\n";
+here: "h";
 greeting: "Please enter your name: \n\0";
 suffix: "!\n\0";
 prefix: "Hello, \0";
+pointer: [-1];
+character: [-1];
+
+main:
+
+    puts(greeting)
+    getline(nameBuffer, NEWLINE)
+
+    puts(prefix)
+    puts(nameBuffer)
+    puts(suffix)
+    
+    halt   
+
 nameBuffer:
