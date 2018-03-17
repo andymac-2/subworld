@@ -1,78 +1,218 @@
-###
-# puts(label): prints a string at 'label' to stdout
-###
+Z Z main;          # goto main
+################################################################################
+# global varaiables
+################################################################################
+Z:          [0];    # zero
+NEG1:       [-1];   # negative one, used fo incrementing
+ONE:        [1];    # one, used for decrementing
+
+################################################################################
+# goto(label): goto label (side effect: set Z to 0)
+################################################################################
+define(`goto', `
+        # goto $1
+        Z Z $1;')
+
+################################################################################
+# zero(label): set value at label to zero
+################################################################################
+define(`zero', `
+        # zero $1
+        $1 $1;')
+
+################################################################################
+# sub(a b): subtract a from b, store the result at b
+################################################################################
+define(`sub', `
+        # sub $1 $2
+        $1 $2;')
+
+################################################################################
+# inc(a): inrement a
+################################################################################
+define(`inc', `
+        # inc $1
+        NEG1 $1;')
+
+################################################################################
+# dec(a): decrement a
+################################################################################
+define(`dec', `
+        # dec $1
+        ONE $1;')
+
+################################################################################
+# movneg(a b): move -a to b
+################################################################################
+define(`movneg', `
+        # movneg $1 $2
+        zero($2, $2)
+        sub($1, $2)')
+
+################################################################################
+# putchar(label): put a single character at label to stdout
+################################################################################
+define(`putchar',`
+        # putchar $1
+        $1 -1;')
+    
+################################################################################
+# getchar(label): get a single character from stdin, and store it at label
+################################################################################
+define(`getchar', `
+        # getchar $1
+        -1 $1;')
+
+################################################################################
+# puts(label): prints a string at 'label' to stdout                             
+################################################################################
+puts_label: [-1];
 define(`puts_c', `0')
-define(`puts',`
-    define(`puts_c', incr(puts_c))
+define(`puts',`define(`puts_c', incr(puts_c))
+        # puts $1
+        movneg(`puts_start_'puts_c, puts_label)
     `puts_start_'puts_c:
         $1 -1 `puts_end_'puts_c;
-        NEG1 `puts_start_'puts_c;
-        Z Z `puts_start_'puts_c;
-    `puts_end_'puts_c:')
+        inc(`puts_start_'puts_c);
+        goto(`puts_start_'puts_c);
+    `puts_end_'puts_c:
+        movneg(puts_label, `puts_start_'puts_c)')
 
-###
-# getLine(buffer): reads stdin until newline, null, or EOF into 
-# buffer labeled by "buffer"
-###
+################################################################################
+# zeros(label): deletes string in memory (ZEROs a String)
+################################################################################
+zeros_label: [-1];
+define(`zeros_c', `0')
+define(`zeros',`define(`zeros_c', incr(zeros_c))
+        # zeros $1
+        movneg(`zeros_ref_'zeros_c`.0', zeros_label)
+    `zeros_ref_'zeros_c:
+        $1 Z `zeros_end_'zeros_c;
+        $1 $1;
+        inc(`zeros_ref_'zeros_c`.0')
+        inc(`zeros_ref_'zeros_c`.3')
+        inc(`zeros_ref_'zeros_c`.4')
+        Z Z `zeros_ref'zeros_c;
+    `zeros_end_'zeros_c:
+        movneg(zeros_label, `zeross_ref_'zeros_c`.0')
+        movneg(zeros_label, `zeross_ref_'zeros_c`.3')
+        movneg(zeros_label, `zeross_ref_'zeros_c`.4')')
+
+
+################################################################################
+# getLine(buffer, untilChar): reads stdin into 'buffer' until it encounters 
+# 'untilChar', null, or EOF.
+################################################################################
+gL_characters: [-1, -1];
+gL_label: [-1];
 define(`gL_c', `0')
-define(`getLine', `
-    define(`gL_c', incr(gL_c))
+define(`getLine', `define(`gL_c', incr(gL_c))
+        # getLine $1
+        movneg(`gL_start_'gL_c, gL_label)        # store our pointer to the buffer for later
     `gL_start_'gL_c:
-        -1 `gL_character_'gL_c `gL_finalise_'gL_c;
-        `gL_character_'gL_c `gL_character_'gL_c`.1';
-        beq(NEWLINE, `gL_character_'gL_c, `gL_finalise_'gL_c)
-        Z Z `gL_continue_'gL_c;
-    `gL_finalise_'gL_c:
-        `gL_character_'gL_c`.1' `gL_character_'gL_c`.1';
+        $1 $1;                                  # zero out character in character buffer
+        zero(gL_character.0)                    # zero A
+        -1 gL_characters.0 `gL_finalise_'gL_c;  # write negative character to A
+        movneg(gL_characters.0 gL_characters.1) # write positive character to B
+        beq($2, gL_characters.0, `gL_finalise_'gL_c) # break if character equal to terminating character.
     `gL_continue_'gL_c:
-        `gL_character_'gL_c`.1' $1 `gL_end_'gL_c;
-        NEG1 `gL_continue_'gL_c`.1';
-        Z Z `gL_start_'gL_c; 
-    `gL_character_'gL_c:
-        [-1, -1];
-    `gL_end_'gL_c:')
+        gL_characters.1 $1;                     # write A to buffer
+        inc(`gL_continue_'gL_c`.1')             # increment buffer pointer
+        inc(`gL_start_'gL_c`.0')
+        inc(`gL_start_'gL_c`.1')
+        goto(`gL_start_'gL_c);                  # loop
+    `gL_finalise_'gL_c:                         # restore pointers.
+        movneg(gL_label, `gL_start_'gL_c`.0')
+        movneg(gL_label, `gL_start_'gL_c`.1')
+        movneg(gL_label, `gL_continue_'gL_c`.1')')
 
-###
+################################################################################
 # mov(a, b) set b = a
-###
+################################################################################
 define(`mov',`
-    $2 $2;
-    $1 Z;
-    Z $2;
-    Z Z;')
+        # mov $1 $2
+        zero($2)
+        sub($1, Z)
+        sub(Z, $2)
+        zero(Z)')
 
-###
-# beq(a, b, c) branch if a = b. destroys b in the process
-###
+################################################################################
+# deref(a, b) set b = *a
+################################################################################
+define(`deref',`
+        # deref $1 $2
+        zero($2)
+        sub($1, Z)
+        sub(Z, $2)
+        zero(Z)')
+
+################################################################################
+# beq(a, b, c) branch if a = b.
+################################################################################
+beq_buffer: [-1, -1];
 define(`beq',`
-        $1 $2;
-        bz($2, $3)')
+        # beq $1 $2 $3
+        zero(beq_buffer.0)
+        zero(beq_buffer.1)
+        sub($1, beq_buffer.0)
+        sub($2, beq_buffer.1)
+        sub(beq_buffer.0 beq_buffer.1)
+        bz(beq_buffer.1, $3)')
 
-###
-# bz(a, b) branch if 'a' is zero to 'b'. destroys a in the process
-###
+################################################################################
+# bneq(a, b, c) branch if a != b.
+################################################################################
+define(`bneq_c', `0')
+define(`bneq',`define(`bneq_c', incr(bneq_c))
+        # bneq $1 $2 $3
+        beq($1 $2, `bneq_end_'bneq_c)
+        goto($3)
+    `bneq_end_'bneq_c:')
+
+################################################################################
+# bleq(a, b) branch to b if a <= 0.
+################################################################################
+define(`bleq',`
+        # bleq $1 $2
+        Z $1 $2')
+
+################################################################################
+# bgeq(a, b) branch to b if a >= 0.
+################################################################################
+define(`bgeq_c', `0')
+define(`bgeq',`define(`bgeq_c', incr(bgeq_c))
+        # bgeq $1 $2
+        $1 Z `bgeq_branch'bgeq_c;
+        goto(`bgeq_end_'bgeq_c)
+    `bgeq_branch'bgeq_c:
+        goto($2)    # gotos required to set Z to zero
+    `bgeq_end_'bgeq_c:')
+
+################################################################################
+# bz(a, b) branch to 'b' if 'a' is zero.
+################################################################################
 define(`bz_c', `0')
-define(`bz',`
-    define(`bz_c', incr(bz_c))
+define(`bz',`define(`bz_c', incr(bz_c))
+        # bz $1 $2 
         $1 Z `bz_test2_'bz_c;
-        Z Z `bz_end_'bz_c;
+        goto(`bz_end_'bz_c);
     `bz_test2_'bz_c:
-        Z Z;
-        Z $1 $2;
+        zero(Z)
+        bleq($1, $2);
     `bz_end_'bz_c:')
 
 
-start:
+main:
     puts(greeting)
-    getLine(nameBuffer)
+    getchar(nameBuffer.0)
+    getchar(nameBuffer.1)
+    getchar(nameBuffer.2)
     puts(prefix)
     puts(nameBuffer)
     puts(suffix)
 
-Z: [0];
-NEG1: [-1];
 NEWLINE: "\n";
 greeting: "Please enter your name: \n\0";
 suffix: "!\n\0";
-prefix: "Hello, ";
+prefix: "Hello, \0";
 nameBuffer:
