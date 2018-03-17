@@ -242,18 +242,15 @@ define(`bz',`define(`bz_c', incr(bz_c))
 
 ###############################################################################
 
-NEWLINE: "\n";
-here: "h";
+newline: "\n";
 greeting: "Please enter your name: \n\0";
 suffix: "!\n\0";
 prefix: "Hello, \0";
-pointer: [-1];
-character: [-1];
 
 main:
 
     puts(greeting)
-    getline(nameBuffer, NEWLINE)
+    getline(nameBuffer, newline)
 
     puts(prefix)
     puts(nameBuffer)
