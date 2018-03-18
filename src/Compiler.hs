@@ -5,11 +5,11 @@ module Compiler
 import qualified Data.Text as T
 import Text.Parsec
     ( choice, between, try, runParser, many, many1, eof, getState, optional
-    , modifyState , option, lookAhead, sepBy, (<?>)) 
+    , modifyState , option, lookAhead, sepBy, (<?>))
 import Text.Parsec.Char
     ( noneOf, char, spaces, letter, oneOf, noneOf, string, digit, hexDigit
     , anyChar, alphaNum)
-import Text.Parsec.Text 
+import Text.Parsec.Text
     ( GenParser )
 import Data.Char
     ( ord )
@@ -21,7 +21,7 @@ data Cell = Literal Int | Label String Int
     deriving (Show)
 type LabelMap = H.HashMap String Int
 type ParseState = (Int, LabelMap)
-type SParser = GenParser ParseState 
+type SParser = GenParser ParseState
 
 programStart :: Int
 programStart = 130
@@ -29,18 +29,18 @@ programStart = 130
 compile :: T.Text -> T.Text
 compile programText = result where
     (cells, (_, h)) = runParserOrDie programText
-    binary = map (intToParagraph . resolveCell h) $ cells    
+    binary = map (intToParagraph . resolveCell h) $ cells
     body = T.intercalate (T.pack "\n\n") binary
     result = T.concat [cRuntimePrefix, body, cRuntimeSuffix]
     -- result = T.pack . show . map (resolveCell h) $ cells
     -- result = T.pack . show $ cells
 
-    
+
 splitList :: Int -> [a] -> [[a]]
 splitList _ [] = []
 splitList n xs = (prefix : splitList n suffix) where
     (prefix, suffix) = splitAt n xs
-    
+
 intToParagraph :: Int -> T.Text
 intToParagraph n = result where
     wStr = T.pack "world"
@@ -51,8 +51,8 @@ intToParagraph n = result where
 
     stringList = concat . map (makeHello . testBit n) $ [0..31]
     lines = map (T.intercalate (T.pack " ")) . splitList 12 $ stringList
-    formattedPara = T.intercalate (T.pack "\n    ") $ lines 
-    result  = T.append (T.pack "    ") formattedPara 
+    formattedPara = T.intercalate (T.pack "\n    ") $ lines
+    result  = T.append (T.pack "    ") formattedPara
 
 resolveCell :: LabelMap -> Cell -> Int
 resolveCell _ (Literal a) = a
@@ -76,7 +76,7 @@ statement :: SParser [Cell]
 statement = do
     seps
     choice
-        [ try $ do 
+        [ try $ do
             label
             return []
         , notLabel
@@ -207,18 +207,21 @@ unquotedVal =  choice
 
 decimalNumber :: SParser Int
 decimalNumber = (do
-    sign <- option [] $ do 
-            char '-'
-            return "-"
+    sign <- option [] $ do
+        char '-'
+        return "-"
     numString <- many1 digit
     return . read $ sign ++ numString) <?> "decimal number"
 
 hexadecimalNumber :: SParser Int
 hexadecimalNumber = (do
-        string "0x"
-        numString <- many1 hexDigit
-        return . read $ "0x" ++ numString) <?> "hexadecimal number"
- 
+    sign <- option [] $ do
+        char '-'
+        return "-"
+    string "0x"
+    numString <- many1 hexDigit
+    return . read $ sign ++ "0x" ++ numString) <?> "hexadecimal number"
+
 
 labelReference :: SParser Cell
 labelReference = do
@@ -235,7 +238,7 @@ comment :: SParser ()
 comment = (do
     char '#'
     many (noneOf "\n")
-    choice 
+    choice
         [ do
             char '\n'
             return ()
@@ -248,8 +251,8 @@ intData = between (char '[') (char ']') (
         seps
         val <- unquotedVal
         seps
-        return val) 
-    `sepBy` 
+        return val)
+    `sepBy`
         (char ',')) <?> "literal list"
 
 cRuntimePrefix :: T.Text

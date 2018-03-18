@@ -12,4 +12,4 @@ helloString:
     "Hello World!\n\0";
 
 data:
-    [0x00, -1];
+    [0x00, -0x01];

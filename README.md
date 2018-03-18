@@ -10,24 +10,44 @@ An esoteric programming language using only two symbols. "hello" and "world". Sk
 
 You will need several things to run this language in full: A POSIX compliant `C` compiler to run the "hello world" source (eg: Clang or gcc), and the Haskell tool stack if you wish to compile the compiler. A very spartan compiler is provided in the `/samples` directory written in C, which will only produce the `hello` s and `world` s from the second to the second-last paragraph of the output. You will have to copy the first and last paragraphs yourself. Some insight to this process is discussed below.
 
-### Invocation
+### QuickStart
+
+Compilation is done simply with stack:
+
+```
+$ cd installation/directory
+$ stack build
+```
 
 The subworld compiler: `sc`, takes input from STDIN in the subworld language, and produces valid C code to STDOUT. The C code will only have the symbols `hello` and `world` in the body of `main`.
 
 ```
-cd installation/directory
-stack build
-stack exec sc < ./samples/helloWorld.sw > helloWorld.c
-c99 -o helloWorld.out helloWorld.c && ./helloWorld.out
+$ stack exec sc < ./samples/helloWorld.sw > helloWorld.c
+```
+
+You can then compile the `c` file with your favourite compiler:
+
+```
+$ c99 -o helloWorld.out helloWorld.c && ./helloWorld.out
+```
+
+If you wish to run `sc` globally without `stack exec` you can run:
+
+```
+$ stack install
+$ sc < infile > outfile
 ```
 
 Since the language itself is quite limited, more so than assembly, the `basicIO.swc` file has been preprocessed using `m4`, and includes some helpful macros to do things such as moving around variables, printing and receiving strings, and arithmetic. On a unix like system, `m4` should be installed by default. An additional step will be required:
 
-```bash
+```
 m4 -E < ./samples/basicIO.swc | stack exec sc > helloWorld.c
 c99 -o helloWorld.out helloWorld.c && ./helloWorld.out
 ```
-The `-E` flag stops the execution of `m4` when an error occurs. You may wish to separate the execution of `m4` with the execution of `sc`
+
+The `-E` flag stops the execution of `m4` when an error occurs. You may wish to separate the execution of `m4` with the execution of `sc`.
+
+For a more information, skip to "The Subworld language".
 
 ### Rationale
 
@@ -235,4 +255,33 @@ Input and output are performed by reading from, or writing to negative memory ad
 
 *Strings* are enclosed by double quotes. You can use a backslash to escape a character in a string. Normal escape sequences apply. Strings are not null terminated by default, so you may have to put a `\0` yourself after a string if you want it to stop printing. Strings take up adjacent areas in memory, so you can write multiple strings right next to each other and they will be joined in memory.
 
-One quirk of strings is that they are stored as *negative values*. That means for example the character `H` is stored a `-72` rather than `72`. This makes it easier for IO.
+One quirk of strings is that they are stored as *negative values*. That means for example the character `H` is stored a `-72` rather than `72`. This makes it easier for IO, and makes the above "Hello World" program work as expected.
+
+```
+# All data is composed of integers or labels
+[1, 3, -4, -5, 0x0006, -0x01, label, anotherLabel.2];
+
+# A number can be decimal or hexadecimal
+[0x10, -0x04, 16, -20];
+
+# data can consist of a single value
+[hello];
+```
+
+*Data* is composed of a series of sequential values in memory. *data* can either be a decimal number, a hexadecimal number, or a *label reference*. *data* can be written as negative values by preceding the number with a `-`. Hexadecimal numbers are written by preceding the number with an `0x`.
+
+### Preprocessing
+```
+# output can be piped from m4 straight to sc
+m4 -E < ./samples/basicIO.swc | stack exec sc > helloWorld.c
+
+# you may wish to run the two separately.
+m4 -E < ./samples/basicIO.swc > ./samples/basicIO.sw
+stack exec sc < ./samples/basicIO.sw > helloWorld.c
+```
+
+Since the language only has a single instruction, it is quite limited in it's functionality. It's recommended to use a text preprocessor prior to sending the output to a compiler. A suitable macro preprocessor exists on POSIX compliant systems for textual replacement: `m4`. For maximal portability, this preprocessor has been used. The usage of `m4` is covered elsewhere. The `basicIO.swc` must be preprocessed before execution. This allows us to use higher level functions when writing programs using `subleq` only.
+
+## Conclusion
+
+Please submit any feature requests, regular requests or bugs to Github. and I hope you enjoyed this silly little demo!
