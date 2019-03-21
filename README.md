@@ -47,7 +47,7 @@ c99 -o helloWorld.out helloWorld.c && ./helloWorld.out
 
 The `-E` flag stops the execution of `m4` when an error occurs. You may wish to separate the execution of `m4` with the execution of `sc`.
 
-For a more information, skip to "The Subworld language".
+For more information, skip to "The Subworld language".
 
 ### Rationale
 
