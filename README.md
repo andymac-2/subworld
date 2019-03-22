@@ -53,11 +53,11 @@ For more information, skip to "The Subworld language".
 
 I have always been fascinated by the offerings of the IOCCC, and some of the more amusing esoteric languages. One thing that fascinated me was the concept of an OISC, or a One Instruction Set Computer. It is indeed possible to create an architecture that only has a single instruction and still be turing complete! Judicious choice of instruction means that any computation can be performed, and an example of such an instruction would be `subleq`. `subleq` is short for "SUBtract and Branch if Less than or EQual to zero".
 
-I still felt I could do better though. The program for a `subleq` machine must be loaded into storage first in order for it to run. A language such as `brainfuck` is different. All data is stored in the language itself, and in `brainfuck` all memory is initialised to zero. Any strings, or memory initialisation must be done while the machine is running. At the same time I was thinking about this, I had also seen a terribly obfuscated version of a "Hello world" program written in `C++` which, according to the author, had to be compiled by their baffled professor in order to verify it did indeed print "Hello World!".
+I still felt I could do better. The program for a `subleq` machine must be loaded into storage first in order for it to run. A language such as `brainfuck` is different. All data is stored in the language itself, and in `brainfuck` all memory is initialised to zero. Any strings, or memory initialisation must be done while the machine is running. At the same time I was thinking about this, I had also seen a terribly obfuscated version of a "Hello world" program written in `C++` which, according to the author, had to be compiled by their baffled professor in order to verify it did indeed print "Hello World!".
 
 ### Introduction to the language and runtime
 
-It had occurred to me that `brainfuck` uses six symbols without memory initialisation, and a OISC needs one instruction at a minimum, but required memory initialisation first. I figured that it would require a minimum of two carefully chosen symbols to produce a language that would not need memory initialisation first. Repeatedly writing the same symbol would be trivially impossible to initialise the memory correctly, so what better way to describe a "Hello World" program than to write it only using two symbols: `hello` and `world`. Anyway, let's have a look at some of the source code. The following is an excerpt from `samples/hwOriginalObfuscated.c`. Try compiling this code to confirm it does indeed print "Hello World!".
+It had occurred to me that `brainfuck` uses six symbols without memory initialisation, and an OISC needs one instruction at a minimum, but required memory initialisation first. I figured that it would require a minimum of two carefully chosen symbols to produce a language that would not need memory initialisation first. Repeatedly writing the same symbol would be trivially impossible to initialise the memory correctly, so what better way to describe a "Hello World" program than to write it only using two symbols: `hello` and `world`. Anyway, let's have a look at some of the source code. The following is an excerpt from `samples/hwOriginalObfuscated.c`. Try compiling this code to confirm it does indeed print "Hello World!".
 
 ```C
 #include <stdio.h>
@@ -100,7 +100,7 @@ world hello world world world hello world hello world hello world hello
 
 So somehow we are expected to decipher the above 'code' for lack of a better word to find the truth behind all of this. You'll notice that the source code is separated into paragraphs. As a joke, I could say that this is for readability. The most interesting of these paragraphs are the first and last paragraphs.
 
-It's about time to tell you what "hello" and "world" do. These are instructions which I picked very carefully in order to be able to initialise memory and run a meaningful program with it. Each instruction is a fixed at three cells wide, and using 32 bit integers for each memory cell, each instruction is 12 bytes wide. The instructions are laid out as follows:
+It's about time to tell you what "hello" and "world" do. These are instructions which I picked very carefully in order to be able to initialise memory and run a meaningful program with it. Each instruction is fixed at three cells wide, and using 32 bit integers for each memory cell, each instruction is 12 bytes wide. The instructions are laid out as follows:
 
 ```
 A B C
@@ -144,7 +144,7 @@ We increment `m[0]` by alternating `hello` and `world`. This allows us to contro
 
 #### Loading the program
 
-The bootstrap is now complete. I can write out out program a single bit at a time using `hello` and `world`. To write a `1` I can simply write `hello`. writing a zero requires more effort. A zero can be written using `world world world hello world world`. A different bootstrap program would require different instructions to write data, but I'm not jumping to do it, it was hard enough the first time. The vast bulk of the source code is loading the data for the program.
+The bootstrap is now complete. I can write out our program a single bit at a time using `hello` and `world`. To write a `1` I can simply write `hello`. Writing a zero requires more effort. A zero can be written using `world world world hello world world`. A different bootstrap program would require different instructions to write data, but I'm not jumping to do it, it was hard enough the first time. The vast bulk of the source code is loading the data for the program.
 
 #### Initialising the program
 
@@ -152,7 +152,7 @@ The program initialisation is the last paragraph of the C code.
 
 In order to actually run the program I've loaded, I have to advance the instruction pointer to address `128`. Unfortunately for me, my own bootstrap program gets in the way and will cause a segfault if I try to advance through it. I use one of the values I manipulated earlier to give me a branching instruction which will allow me to advance past the bootstrap program. Unfortunately this means that the instruction pointer is not aligned with the start of the program proper. This is an easy fix, I simply write a few extra bytes and start the program at address `130` instead.
 
-I simply advance the program to address `130` and branch to a negative value in order to enter `subleq` mode. From then on, the program is controlled by whatever the user wrote. Note that during the porcess of advancing the instruction pointer, I will have written some garbage values to memory outside of the bounds of the program, so you cannot rely on these values being initialised to zero.
+I simply advance the program to address `130` and branch to a negative value in order to enter `subleq` mode. From then on, the program is controlled by whatever the user wrote. Note that during the process of advancing the instruction pointer, I will have written some garbage values to memory outside of the bounds of the program, so you cannot rely on these values being initialised to zero.
 
 ## The Subworld Language
 
